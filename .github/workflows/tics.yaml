@@ -1,0 +1,61 @@
+name: TICS scan
+on:
+  pull_request:
+  schedule:
+    - cron: '0 10 * * *'
+
+permissions:
+  contents: read
+ 
+jobs:
+  TICS:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Latest branches
+          - { branch: main }
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - name: Checking out repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{matrix.branch}}
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: go mod download
+        run: go mod download
+      - name: TICS scan
+        run: |
+          export TICSAUTHTOKEN=${{ secrets.TICSAUTHTOKEN }}
+
+          set -x
+
+          # TICS requires us to have the test results in cobertura xml format under the
+          # directory use below
+          make go.test
+          go install github.com/boumenot/gocover-cobertura@latest
+          gocover-cobertura < coverage.txt > coverage.xml
+          mkdir .coverage
+          mv ./coverage.xml ./.coverage/
+
+          # Install the TICS and staticcheck
+          go install honnef.co/go/tools/cmd/staticcheck@v0.4.7
+          . <(curl --silent --show-error 'https://canonical.tiobe.com/tiobeweb/TICS/api/public/v1/fapi/installtics/Script?cfg=default&platform=linux&url=https://canonical.tiobe.com/tiobeweb/TICS/')
+
+          # We need to have our project built.
+          # TICS will also try to build parts of the project itself.
+          make clean
+          go build -a ./...
+
+          TICSQServer -project k8s-dqlite -tmpdir /tmp/tics -branchdir $HOME/work/k8s-snap/k8s-snap/
+
+  
