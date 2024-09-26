@@ -1,3 +1,5 @@
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/petrutlucian94/k8s-dqlite/badge)](https://scorecard.dev/viewer/?uri=github.com/petrutlucian94/k8s-dqlite)
+
 # Dqlite for Kubernetes
 
 This project is a drop in replacement for etcd on Kubernetes.
